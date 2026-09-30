@@ -1,17 +1,23 @@
-const core = require("@actions/core");
+let core;
 const Ajv = require("ajv");
 const addFormats = require("ajv-formats");
 const { promises: fs } = require("fs");
 const glob = require("glob-promise");
-const utils = require("@gh-actions-utils/inputs");
 const jsyaml = require("js-yaml");
 
-// Omitted options must retain Ajv defaults; parseInput returns a wrapper.
+// Keep unset values out of Ajv options and preserve explicit false values.
 function input(name, ...types) {
-  if (core.getInput(name) === "") return undefined;
-  const parsed = utils.parseInput(name, ...types);
-  if (parsed === null) throw new Error(`Invalid value for input ${name}`);
-  return parsed.value;
+  const value = core.getInput(name);
+  if (value === "") return undefined;
+  for (const type of types) {
+    if (type === "boolean" && /^(true|false)$/i.test(value)) return value.toLowerCase() === "true";
+    if (type === "integer" && /^[+-]?\d+$/.test(value) && Number.isSafeInteger(Number(value))) return Number(value);
+    if (type === "json") {
+      try { return JSON.parse(value); } catch { /* Try the next supported type. */ }
+    }
+    if (type === "string") return value;
+  }
+  throw new Error(`Invalid value for input ${name}`);
 }
 
 const OUTPUTS = {
@@ -36,6 +42,7 @@ async function loadFiles(pathOrData) {
 }
 
 async function validate() {
+  core = await import("@actions/core");
   try {
     const [data, schema] = await Promise.all([
       loadFiles(core.getInput("data", { required: true })),
