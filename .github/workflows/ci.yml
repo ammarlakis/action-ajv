@@ -1,0 +1,54 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '17 6 * * 5'
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  consumer:
+    name: Packaged action consumer tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Check committed bundle is reproducible
+        run: npm run check:bundle
+      - run: npm test
+      - name: Invoke the action through the GitHub runner
+        id: valid
+        uses: ./
+        with:
+          schema: test/fixtures/schema.json
+          data: test/fixtures/valid.*
+          allErrors: 'false'
+      - name: Invoke invalid input
+        id: invalid
+        continue-on-error: true
+        uses: ./
+        with:
+          schema: test/fixtures/schema.json
+          data: test/fixtures/invalid.yml
+      - name: Verify runner outputs and failure behavior
+        env:
+          VALID: ${{ steps.valid.outputs.valid }}
+          INVALID: ${{ steps.invalid.outputs.valid }}
+          OUTCOME: ${{ steps.invalid.outcome }}
+          ERRORS: ${{ steps.invalid.outputs.errors }}
+        run: |
+          test "$VALID" = true
+          test "$INVALID" = false
+          test "$OUTCOME" = failure
+          node -e 'const a=JSON.parse(process.env.ERRORS); if(!a.some(e=>e.keyword==="type")) process.exit(1)'

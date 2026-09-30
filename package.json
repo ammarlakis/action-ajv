@@ -4,7 +4,9 @@
   "description": "GitHub action to validate JSON against a schema using Ajv.",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "ncc build src/index.js -o dist --license licenses.txt",
+    "test": "node --test test/*.test.js",
+    "check:bundle": "npm run build && git diff --exit-code -- dist"
   },
   "repository": {
     "type": "git",
@@ -26,10 +28,16 @@
   "homepage": "https://github.com/ammarlakis/action-ajv#readme",
   "dependencies": {
     "@actions/core": "^1.10.1",
-    "@gh-actions-utils/inputs": "github:ammarlakis/github-actions-utils",
+    "@gh-actions-utils/inputs": "github:ammarlakis/github-actions-utils#dca091256e287b02590609b579cbff3170de34bc",
     "ajv": "^8.13.0",
     "ajv-formats": "^3.0.1",
     "glob-promise": "^6.0.5",
     "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "0.45.0"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

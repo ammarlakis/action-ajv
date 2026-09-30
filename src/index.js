@@ -6,7 +6,15 @@ const glob = require("glob-promise");
 const utils = require("@gh-actions-utils/inputs");
 const jsyaml = require("js-yaml");
 
-const OUPTUTS = {
+// Omitted options must retain Ajv defaults; parseInput returns a wrapper.
+function input(name, ...types) {
+  if (core.getInput(name) === "") return undefined;
+  const parsed = utils.parseInput(name, ...types);
+  if (parsed === null) throw new Error(`Invalid value for input ${name}`);
+  return parsed.value;
+}
+
+const OUTPUTS = {
   valid: "valid",
   errors: "errors",
 };
@@ -30,61 +38,72 @@ async function loadFiles(pathOrData) {
 async function validate() {
   try {
     const [data, schema] = await Promise.all([
-      loadFiles(utils.parseInput("data", "String").value),
-      loadFiles(utils.parseInput("schema", "String").value),
+      loadFiles(core.getInput("data", { required: true })),
+      loadFiles(core.getInput("schema", { required: true })),
     ]);
 
     if (schema.length == 0) {
       core.setFailed("Failed to load the schema");
-      core.setOutput(OUPTUTS.valid, false);
+      core.setOutput(OUTPUTS.valid, false);
       return;
     }
 
     if (data.length == 0) {
       core.info("Nothing to validate");
-      core.setOutput(OUPTUTS.valid, true);
+      core.setOutput(OUTPUTS.valid, true);
       return;
     }
 
-    const options = {
-      strict: utils.parseInput("strict", "boolean", "string"),
-      strictSchema: utils.parseInput("strictSchema", "boolean", "string"),
-      strictNumbers: utils.parseInput("strictNumbers", "boolean"),
-      strictTypes: utils.parseInput("strictTypes", "boolean", "string"),
-      strictTuples: utils.parseInput("strictTuples", "boolean", "string"),
-      strictRequired: utils.parseInput("strictRequired", "boolean", "string"),
-      allowUnionTypes: utils.parseInput("allowUnionTypes", "boolean"),
-      allowMatchingProperties: utils.parseInput("allowMatchingProperties","boolean"),
-      validateFormats: utils.parseInput("validateFormats", "boolean"),
-      allErrors: utils.parseInput("allErrors", "boolean"),
-      verbose: utils.parseInput("verbose", "boolean"),
-      discriminator: utils.parseInput("discriminator", "boolean"),
-      unicodeRegExp: utils.parseInput("unicodeRegExp", "boolean"),
-      timestamp: utils.parseInput("timestamp", "string"),
-      parseDate: utils.parseInput("parseDate", "boolean"),
-      allowDate: utils.parseInput("allowDate", "boolean"),
-      int32range: utils.parseInput("int32range", "boolean"),
-      $comment: utils.parseInput("comment", "boolean"),
-      removeAdditional: utils.parseInput("removeAdditional","boolean","string"),
-      useDefaults: utils.parseInput("useDefaults", "boolean", "string"),
-      coerceTypes: utils.parseInput("coerceTypes", "boolean", "string"),
-      meta: utils.parseInput("meta", "boolean", "json"),
-      validateSchema: utils.parseInput("validateSchema", "boolean", "string"),
-      addUsedSchema: utils.parseInput("addUsedSchema", "boolean"),
-      inlineRefs: utils.parseInput("inlineRefs", "boolean", "integer"),
-      passContext: utils.parseInput("passContext", "boolean"),
-      loopRequired: utils.parseInput("loopRequired", "integer"),
-      loopEnum: utils.parseInput("loopEnum", "integer"),
-      ownProperties: utils.parseInput("ownProperties", "boolean"),
-      multipleOfPrecision: utils.parseInput("multipleOfPrecision", "integer"),
-      messages: utils.parseInput("messages", "boolean"),
-      codeEs5: utils.parseInput("codeEs5", "boolean"),
-      codeEsm: utils.parseInput("codeEsm", "boolean"),
-      codeLines: utils.parseInput("codeLines", "boolean"),
-      codeSource: utils.parseInput("codeSource", "boolean"),
-      codeOptimize: utils.parseInput("codeOptimize", "boolean", "integer"),
+    const rawOptions = {
+      strict: input("strict", "boolean", "string"),
+      strictSchema: input("strictSchema", "boolean", "string"),
+      strictNumbers: input("strictNumbers", "boolean"),
+      strictTypes: input("strictTypes", "boolean", "string"),
+      strictTuples: input("strictTuples", "boolean", "string"),
+      strictRequired: input("strictRequired", "boolean", "string"),
+      allowUnionTypes: input("allowUnionTypes", "boolean"),
+      allowMatchingProperties: input("allowMatchingProperties","boolean"),
+      validateFormats: input("validateFormats", "boolean"),
+      allErrors: input("allErrors", "boolean"),
+      verbose: input("verbose", "boolean"),
+      discriminator: input("discriminator", "boolean"),
+      unicodeRegExp: input("unicodeRegExp", "boolean"),
+      timestamp: input("timestamp", "string"),
+      parseDate: input("parseDate", "boolean"),
+      allowDate: input("allowDate", "boolean"),
+      int32range: input("int32range", "boolean"),
+      $comment: input("comment", "boolean"),
+      removeAdditional: input("removeAdditional","boolean","string"),
+      useDefaults: input("useDefaults", "boolean", "string"),
+      coerceTypes: input("coerceTypes", "boolean", "string"),
+      meta: input("meta", "boolean", "json"),
+      validateSchema: input("validateSchema", "boolean", "string"),
+      addUsedSchema: input("addUsedSchema", "boolean"),
+      inlineRefs: input("inlineRefs", "boolean", "integer"),
+      passContext: input("passContext", "boolean"),
+      loopRequired: input("loopRequired", "integer"),
+      loopEnum: input("loopEnum", "integer"),
+      ownProperties: input("ownProperties", "boolean"),
+      multipleOfPrecision: input("multipleOfPrecision", "integer"),
+      messages: input("messages", "boolean"),
+      codeEs5: input("codeEs5", "boolean"),
+      codeEsm: input("codeEsm", "boolean"),
+      codeLines: input("codeLines", "boolean"),
+      codeSource: input("codeSource", "boolean"),
+      codeOptimize: input("codeOptimize", "boolean", "integer"),
     };
 
+    const options = {};
+    const codeNames = { codeEs5: "es5", codeEsm: "esm", codeLines: "lines", codeSource: "source", codeOptimize: "optimize" };
+    for (const [key, value] of Object.entries(rawOptions)) {
+      if (value === undefined) continue;
+      if (codeNames[key]) {
+        options.code ??= {};
+        options.code[codeNames[key]] = value;
+      } else {
+        options[key] = value;
+      }
+    }
     const ajv = new Ajv(options);
     addFormats(ajv);
     const validate = ajv.compile(schema[0].contents);
@@ -102,13 +121,14 @@ async function validate() {
           validationArray.filter((validation) => validation.errors != null)
         )}`
       );
-      core.setOutput(OUPTUTS.valid, false);
-      core.setOutput(OUPTUTS.errors, JSON.stringify(validate.errors));
+      core.setOutput(OUTPUTS.valid, false);
+      core.setOutput(OUTPUTS.errors, JSON.stringify(validationArray.flatMap((entry) => entry.errors ?? [])));
     } else {
-      core.setOutput(OUPTUTS.valid, true);
+      core.setOutput(OUTPUTS.valid, true);
       core.info("Validation successful!");
     }
   } catch (error) {
+    core.setOutput(OUTPUTS.valid, false);
     core.setFailed(`Failed to validate: ${error.message}`);
   }
 }

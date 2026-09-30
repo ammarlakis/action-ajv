@@ -1,16 +1,40 @@
 name: Release
-
-on: 
+on:
   push:
-    tags:
-    - '*'
-
+    tags: ['v*.*.*']
+permissions:
+  contents: read
 jobs:
-
-  build:
+  verify:
+    uses: ./.github/workflows/ci.yml
+  release:
+    needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v3
-    - uses: ncipollo/release-action@v1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Verify tag version and default-branch ancestry
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          node -e 'if(process.env.TAG !== "v"+require("./package.json").version) process.exit(1)'
+          git merge-base --is-ancestor HEAD origin/master
+      - name: Publish verified source and bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          git archive --format=tar.gz --output=action-ajv.tar.gz HEAD
+          sha256sum action-ajv.tar.gz > SHA256SUMS
+          gh release create "$TAG" action-ajv.tar.gz SHA256SUMS --verify-tag --generate-notes
+      - name: Verify published artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release download "$TAG" --pattern action-ajv.tar.gz --dir downloaded
+          cmp action-ajv.tar.gz downloaded/action-ajv.tar.gz

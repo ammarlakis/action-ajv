@@ -2,7 +2,7 @@ name: JSON Validation
 description: Validates JSON data against a schema.
 inputs:
   schema:
-    description: "The schema file used for valiation."
+    description: "The schema file used for validation."
     required: true
   data:
     description: "The data files to be validated. Glob pattern is supported."
@@ -125,5 +125,5 @@ branding:
   icon: check-circle
   color: green
 runs:
-  using: node20
+  using: node24
   main: dist/index.js

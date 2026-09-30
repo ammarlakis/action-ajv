@@ -46,3 +46,9 @@ jobs:
         data: accounts/*.yml
         allErrors: true
 ```
+
+## Compatibility and maintenance
+
+This action runs on Node 24 in GitHub Actions. Prefer an immutable release tag or full commit SHA when consuming it. See [MAINTENANCE.md](MAINTENANCE.md) for verification and release steps.
+
+Invalid data fails the step and sets `valid` to `false`. `errors` contains a JSON array of Ajv errors from all failed files. An empty data glob succeeds for compatibility; make sure your glob matches the intended files. Schema-loading and parsing failures also set `valid` to `false`.
