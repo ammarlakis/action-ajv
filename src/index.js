@@ -27,6 +27,12 @@ async function loadFiles(pathOrData) {
   }
 }
 
+// Empty action inputs must not override Ajv's defaults.
+function option(inputName, ...types) {
+  if (core.getInput(inputName) === "") return undefined;
+  return utils.parseInput(inputName, ...types)?.value;
+}
+
 async function validate() {
   try {
     const [data, schema] = await Promise.all([
@@ -47,42 +53,42 @@ async function validate() {
     }
 
     const options = {
-      strict: utils.parseInput("strict", "boolean", "string"),
-      strictSchema: utils.parseInput("strictSchema", "boolean", "string"),
-      strictNumbers: utils.parseInput("strictNumbers", "boolean"),
-      strictTypes: utils.parseInput("strictTypes", "boolean", "string"),
-      strictTuples: utils.parseInput("strictTuples", "boolean", "string"),
-      strictRequired: utils.parseInput("strictRequired", "boolean", "string"),
-      allowUnionTypes: utils.parseInput("allowUnionTypes", "boolean"),
-      allowMatchingProperties: utils.parseInput("allowMatchingProperties","boolean"),
-      validateFormats: utils.parseInput("validateFormats", "boolean"),
-      allErrors: utils.parseInput("allErrors", "boolean"),
-      verbose: utils.parseInput("verbose", "boolean"),
-      discriminator: utils.parseInput("discriminator", "boolean"),
-      unicodeRegExp: utils.parseInput("unicodeRegExp", "boolean"),
-      timestamp: utils.parseInput("timestamp", "string"),
-      parseDate: utils.parseInput("parseDate", "boolean"),
-      allowDate: utils.parseInput("allowDate", "boolean"),
-      int32range: utils.parseInput("int32range", "boolean"),
-      $comment: utils.parseInput("comment", "boolean"),
-      removeAdditional: utils.parseInput("removeAdditional","boolean","string"),
-      useDefaults: utils.parseInput("useDefaults", "boolean", "string"),
-      coerceTypes: utils.parseInput("coerceTypes", "boolean", "string"),
-      meta: utils.parseInput("meta", "boolean", "json"),
-      validateSchema: utils.parseInput("validateSchema", "boolean", "string"),
-      addUsedSchema: utils.parseInput("addUsedSchema", "boolean"),
-      inlineRefs: utils.parseInput("inlineRefs", "boolean", "integer"),
-      passContext: utils.parseInput("passContext", "boolean"),
-      loopRequired: utils.parseInput("loopRequired", "integer"),
-      loopEnum: utils.parseInput("loopEnum", "integer"),
-      ownProperties: utils.parseInput("ownProperties", "boolean"),
-      multipleOfPrecision: utils.parseInput("multipleOfPrecision", "integer"),
-      messages: utils.parseInput("messages", "boolean"),
-      codeEs5: utils.parseInput("codeEs5", "boolean"),
-      codeEsm: utils.parseInput("codeEsm", "boolean"),
-      codeLines: utils.parseInput("codeLines", "boolean"),
-      codeSource: utils.parseInput("codeSource", "boolean"),
-      codeOptimize: utils.parseInput("codeOptimize", "boolean", "integer"),
+      strict: option("strict", "boolean", "string"),
+      strictSchema: option("strictSchema", "boolean", "string"),
+      strictNumbers: option("strictNumbers", "boolean"),
+      strictTypes: option("strictTypes", "boolean", "string"),
+      strictTuples: option("strictTuples", "boolean", "string"),
+      strictRequired: option("strictRequired", "boolean", "string"),
+      allowUnionTypes: option("allowUnionTypes", "boolean"),
+      allowMatchingProperties: option("allowMatchingProperties","boolean"),
+      validateFormats: option("validateFormats", "boolean"),
+      allErrors: option("allErrors", "boolean"),
+      verbose: option("verbose", "boolean"),
+      discriminator: option("discriminator", "boolean"),
+      unicodeRegExp: option("unicodeRegExp", "boolean"),
+      timestamp: option("timestamp", "string"),
+      parseDate: option("parseDate", "boolean"),
+      allowDate: option("allowDate", "boolean"),
+      int32range: option("int32range", "boolean"),
+      $comment: option("comment", "boolean"),
+      removeAdditional: option("removeAdditional","boolean","string"),
+      useDefaults: option("useDefaults", "boolean", "string"),
+      coerceTypes: option("coerceTypes", "boolean", "string"),
+      meta: option("meta", "boolean", "json"),
+      validateSchema: option("validateSchema", "boolean", "string"),
+      addUsedSchema: option("addUsedSchema", "boolean"),
+      inlineRefs: option("inlineRefs", "boolean", "integer"),
+      passContext: option("passContext", "boolean"),
+      loopRequired: option("loopRequired", "integer"),
+      loopEnum: option("loopEnum", "integer"),
+      ownProperties: option("ownProperties", "boolean"),
+      multipleOfPrecision: option("multipleOfPrecision", "integer"),
+      messages: option("messages", "boolean"),
+      codeEs5: option("codeEs5", "boolean"),
+      codeEsm: option("codeEsm", "boolean"),
+      codeLines: option("codeLines", "boolean"),
+      codeSource: option("codeSource", "boolean"),
+      codeOptimize: option("codeOptimize", "boolean", "integer"),
     };
 
     const ajv = new Ajv(options);
