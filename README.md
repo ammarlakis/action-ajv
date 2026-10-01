@@ -46,3 +46,14 @@ jobs:
         data: accounts/*.yml
         allErrors: true
 ```
+
+Boolean options accept `true` and `false`; omitted options retain Ajv's defaults.
+String modes (such as `strict: log` or `coerceTypes: array`) and numeric options
+are also supported. `validateFormats: false` disables format checks, not type
+validation. For boolean fields use `type: boolean`, rather than `format: boolean`.
+
+## Development
+
+Install dependencies with `npm ci`, run regression tests with `npm test`, and
+rebuild the committed action entry point with `npm run build` before submitting
+changes. Tests exercise both `src/index.js` and `dist/index.js`.

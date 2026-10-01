@@ -4,7 +4,8 @@
   "description": "GitHub action to validate JSON against a schema using Ajv.",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test",
+    "build": "node node_modules/@vercel/ncc/dist/ncc/cli.js build src/index.js -o dist --license licenses.txt"
   },
   "repository": {
     "type": "git",
@@ -31,5 +32,8 @@
     "ajv-formats": "^3.0.1",
     "glob-promise": "^6.0.5",
     "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "0.38.3"
   }
 }
