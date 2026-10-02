@@ -42065,8 +42065,40 @@ function option(inputName, ...types) {
   return utils.parseInput(inputName, ...types)?.value;
 }
 
+// JSON only: never evaluate format definitions as executable JavaScript.
+function customFormats() {
+  const input = core.getInput("formats");
+  if (input === "") return [];
+  try {
+    const definitions = JSON.parse(input);
+    if (!definitions || typeof definitions !== "object" || Array.isArray(definitions)) {
+      throw new Error("expected a JSON object");
+    }
+    return Object.entries(definitions).map(([name, definition]) => {
+      if (!definition || typeof definition !== "object" || Array.isArray(definition) ||
+          typeof definition.pattern !== "string" ||
+          (definition.flags !== undefined && typeof definition.flags !== "string") ||
+          Object.keys(definition).some((key) => !["pattern", "flags"].includes(key))) {
+        throw new Error(`format "${name}" must contain a string pattern and optional string flags`);
+      }
+      const flags = definition.flags || "";
+      if (/[gy]/.test(flags)) {
+        throw new Error(`format "${name}" cannot use stateful g or y flags`);
+      }
+      try {
+        return [name, new RegExp(definition.pattern, flags)];
+      } catch (error) {
+        throw new Error(`format "${name}": ${error.message}`);
+      }
+    });
+  } catch (error) {
+    throw new Error(`Invalid formats input: ${error.message}`);
+  }
+}
+
 async function validate() {
   try {
+    const formats = customFormats();
     const [data, schema] = await Promise.all([
       loadFiles(utils.parseInput("data", "String").value),
       loadFiles(utils.parseInput("schema", "String").value),
@@ -42125,6 +42157,7 @@ async function validate() {
 
     const ajv = new Ajv(options);
     addFormats(ajv);
+    for (const [name, regex] of formats) ajv.addFormat(name, regex);
     const validate = ajv.compile(schema[0].contents);
     const validationArray = data.map((file) => {
       validate(file.contents);

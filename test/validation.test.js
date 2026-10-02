@@ -32,6 +32,29 @@ for (const entry of ['src/index.js', 'dist/index.js']) {
       expect(unknown, { App_RapidStartup: true }, {}, false);
       expect(unknown, { App_RapidStartup: true }, { strict: true }, false);
       expect({ properties: { value: { type: 'integer' } } }, { value: 1 }, { strict: 'log' }, true);
+      const custom = { type: 'string', format: 'boolean' };
+      const formats = JSON.stringify({ boolean: { pattern: '^(yes|no)$', flags: 'i' } });
+      expect(custom, 'YES', { formats }, true);
+      expect(custom, 'yesterday', { formats }, false);
+      expect(custom, 'wrong', { formats, validateFormats: false }, true);
+      expect({ type: 'array', items: custom }, ['yes', 'yes', 'NO', 'yes'], { formats }, true);
+      expect(custom, 'yes', { formats: '{}' }, false);
+      expect(custom, 'yes', { formats: '' }, false);
+      for (const malformed of ['{', 'null', '[]', 'true',
+        '{"boolean":"/yes/i"}', '{"boolean":null}', '{"boolean":{}}',
+        '{"boolean":{"pattern":1}}', '{"boolean":{"pattern":"yes","flags":1}}',
+        '{"boolean":{"pattern":"yes","extra":true}}',
+        '{"boolean":{"pattern":"["}}',
+        ...['g', 'y', 'ig', 'ii', 'z'].map(flags => JSON.stringify({ boolean: { pattern: 'yes', flags } }))]) {
+        assert.match(expect(custom, 'yes', { formats: malformed }, false), /Invalid formats input/);
+      }
+      expect(custom, 'yes', { formats: JSON.stringify({ boolean: { pattern: '^yes$' } }) }, true);
+      expect({ type: 'string', format: 'digits' }, '123', {
+        formats: JSON.stringify({ digits: { pattern: '^\\d+$' } })
+      }, true);
+      const override = { formats: JSON.stringify({ email: { pattern: '^local$' } }) };
+      expect({ type: 'string', format: 'email' }, 'local', override, true);
+      expect({ type: 'string', format: 'email' }, 'a@example.com', override, false);
       const email = { type: 'string', format: 'email' };
       expect(email, 'not-email', {}, false);
       expect(email, 'not-email', { validateFormats: true }, false);

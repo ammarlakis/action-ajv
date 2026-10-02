@@ -31,6 +31,9 @@ inputs:
   allowMatchingProperties:
     description: "https://ajv.js.org/options.html#allownatchingproperties"
     required: false
+  formats:
+    description: "JSON object of custom string formats: {name: {pattern: regex, flags: optional flags}}. Overrides built-ins; g and y flags are unsupported."
+    required: false
   validateFormats:
     description: "https://ajv.js.org/options.html#validateformats"
     required: false
